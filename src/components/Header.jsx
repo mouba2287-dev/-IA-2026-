@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, LayoutGrid, FolderHeart, HelpCircle, User, LogOut, PlusCircle } from 'lucide-react';
+import { Sparkles, LayoutGrid, FolderHeart, HelpCircle, User, LogOut, PlusCircle, Wand2 } from 'lucide-react';
 
 export default function Header({
   activeTab,
@@ -7,7 +7,8 @@ export default function Header({
   user,
   onOpenAuth,
   onLogout,
-  onCreateNew
+  onCreateNew,
+  onOpenCvWizard
 }) {
   return (
     <header className="sticky top-0 z-40 bg-slate-950/80 backdrop-blur-md border-b border-slate-800/80 px-4 lg:px-8 py-3.5 flex items-center justify-between transition-all">
@@ -79,13 +80,21 @@ export default function Header({
       </nav>
 
       {/* Action CTA & User Profile */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2.5">
+        <button
+          onClick={onOpenCvWizard}
+          className="px-3.5 py-2 bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/30 font-semibold text-xs rounded-xl transition flex items-center gap-1.5 shrink-0"
+        >
+          <Wand2 className="w-3.5 h-3.5 text-amber-400" />
+          <span className="hidden sm:inline">Générer via CV</span>
+        </button>
+
         <button
           onClick={onCreateNew}
           className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-cyan-500 hover:from-indigo-500 hover:to-cyan-400 font-semibold text-xs text-white rounded-xl shadow-lg shadow-indigo-600/25 transition-transform active:scale-95 flex items-center gap-2 shrink-0"
         >
           <PlusCircle className="w-4 h-4" />
-          <span className="hidden sm:inline">Créer un Portfolio</span>
+          <span className="hidden sm:inline">Créer</span>
         </button>
 
         {user ? (

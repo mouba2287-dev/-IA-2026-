@@ -1,8 +1,8 @@
 import React from 'react';
-import { Sparkles, ArrowRight, LayoutGrid, Zap, Share2, Shield, Code, Palette, Globe } from 'lucide-react';
+import { Sparkles, ArrowRight, LayoutGrid, Zap, Share2, Shield, Code, Palette, Globe, Wand2 } from 'lucide-react';
 import { PORTFOLIO_TEMPLATES } from '../data/templates';
 
-export default function LandingPage({ onSelectTemplate, onStartCustom, onExploreGallery }) {
+export default function LandingPage({ onSelectTemplate, onStartCustom, onExploreGallery, onOpenCvWizard }) {
   return (
     <div className="flex-1 overflow-y-auto bg-slate-950 text-slate-100">
       {/* Hero Section */}
@@ -22,33 +22,33 @@ export default function LandingPage({ onSelectTemplate, onStartCustom, onExplore
           </h1>
 
           <p className="text-base sm:text-xl text-slate-300 max-w-2xl mx-auto leading-relaxed font-normal">
-            Concevez un site vitrine professionnel captivant sans écrire une ligne de code. Choisissez un modèle, personnalisez à votre image et publiez avec un lien unique.
+            Concevez un site vitrine professionnel captivant sans écrire une ligne de code. Choisissez un modèle, importez votre CV ou vos photos et publiez avec un lien unique.
           </p>
 
           <div className="flex flex-wrap items-center justify-center gap-4 pt-4">
             <button
-              onClick={onStartCustom}
-              className="px-7 py-4 bg-gradient-to-r from-indigo-600 via-indigo-500 to-cyan-500 hover:from-indigo-500 hover:to-cyan-400 font-bold text-sm text-white rounded-2xl shadow-xl shadow-indigo-600/30 transition-all transform hover:-translate-y-0.5 active:translate-y-0 flex items-center gap-2"
+              onClick={onOpenCvWizard}
+              className="px-7 py-4 bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-500 hover:from-purple-500 hover:to-cyan-400 font-bold text-sm text-white rounded-2xl shadow-xl shadow-indigo-600/30 transition-all transform hover:-translate-y-0.5 active:translate-y-0 flex items-center gap-2"
             >
-              <span>Créer mon Portfolio Gratuitement</span>
+              <Wand2 className="w-4 h-4 text-amber-300" />
+              <span>Générer automatiquement depuis mon CV</span>
               <ArrowRight className="w-4 h-4" />
             </button>
             <button
-              onClick={onExploreGallery}
+              onClick={onStartCustom}
               className="px-7 py-4 bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 font-bold text-sm text-slate-200 rounded-2xl transition flex items-center gap-2"
             >
-              <LayoutGrid className="w-4 h-4 text-indigo-400" />
-              <span>Explorer la Galerie de Modèles</span>
+              <span>Créer à partir d'un modèle</span>
             </button>
           </div>
 
           {/* Quick Stats / Highlights */}
           <div className="pt-10 grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-4xl mx-auto text-left">
             {[
-              { label: 'Modèles prêt-à-l’emploi', val: '6+ Themes' },
-              { label: 'Temps de création', val: '< 5 minutes' },
+              { label: 'Importation CV IA', val: 'Automatique' },
+              { label: 'Upload Photos', val: 'Images locales' },
               { label: 'Partage public', val: 'Lien & QR Code' },
-              { label: 'Exportation', val: 'HTML & JSON' }
+              { label: 'SEO Google', val: 'Optimisé 100%' }
             ].map((stat, idx) => (
               <div key={idx} className="p-4 bg-slate-900/60 border border-slate-800/80 rounded-2xl backdrop-blur-sm">
                 <p className="text-lg font-black text-indigo-400">{stat.val}</p>

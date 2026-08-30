@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Globe,
   Mail,
-  Phone,
   MapPin,
   ExternalLink,
   Send,
@@ -16,10 +15,6 @@ import {
   Camera,
   Feather,
   Box,
-  Star,
-  Sparkles,
-  ArrowRight,
-  Share2,
   Image as ImageIcon
 } from 'lucide-react';
 import { COLOR_PALETTES } from '../data/templates';
@@ -38,9 +33,17 @@ const LinkedinIcon = ({ className = "w-4 h-4" }) => (
 );
 
 export default function PortfolioRenderer({ portfolio, isPreview = false, onShowToast }) {
-  const [activeProjectModal, setActiveProjectModal] = useState(null);
   const [contactSubmitted, setContactSubmitted] = useState(false);
   const [contactMessage, setContactMessage] = useState({ name: '', email: '', message: '' });
+
+  // Dynamically update document title for SEO
+  useEffect(() => {
+    if (portfolio?.seo?.metaTitle) {
+      document.title = portfolio.seo.metaTitle;
+    } else if (portfolio?.profile?.fullName) {
+      document.title = `${portfolio.profile.fullName} - ${portfolio.profile.jobTitle || 'Portfolio'}`;
+    }
+  }, [portfolio]);
 
   if (!portfolio) {
     return (
@@ -58,10 +61,25 @@ export default function PortfolioRenderer({ portfolio, isPreview = false, onShow
     projects = [],
     experiences = [],
     services = [],
-    testimonials = []
+    testimonials = [],
+    seo = {}
   } = portfolio;
 
-  // Icon mapper helper
+  // Schema.org Structured Data for Google SEO
+  const jsonLdData = {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    "name": profile.fullName || "Professionnel",
+    "jobTitle": profile.jobTitle || "",
+    "description": seo.metaDescription || profile.tagline || profile.bio || "",
+    "email": profile.email || "",
+    "address": {
+      "@type": "PostalAddress",
+      "addressLocality": profile.location || ""
+    },
+    "sameAs": Object.values(profile.socialLinks || {}).filter(Boolean)
+  };
+
   const getServiceIcon = (iconName) => {
     switch (iconName) {
       case 'Code': return <Code className="w-6 h-6 text-indigo-400" />;
@@ -93,13 +111,20 @@ export default function PortfolioRenderer({ portfolio, isPreview = false, onShow
 
   return (
     <div className={`w-full min-h-full ${palette.darkBg} ${palette.textDark} font-sans transition-colors duration-300 relative`}>
-      {/* Portfolio Top Bar */}
-      <header className="sticky top-0 z-30 bg-slate-950/70 backdrop-blur-md border-b border-slate-800/60 px-6 py-4 flex items-center justify-between">
+      {/* Schema.org Structured Data script for Google Search indexing */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdData) }}
+      />
+
+      {/* Portfolio Top Bar with Easy Section Navigation */}
+      <header className="sticky top-0 z-30 bg-slate-950/80 backdrop-blur-md border-b border-slate-800/60 px-6 py-4 flex items-center justify-between shadow-xl">
         <a href="#hero" className="text-sm font-black tracking-wide text-white flex items-center gap-2">
           <span className="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-pulse" />
           {profile.fullName || 'Portfolio'}
         </a>
 
+        {/* Easy Section Navigation Links */}
         <nav className="hidden md:flex items-center gap-6 text-xs font-semibold text-slate-300">
           {sections.about && <a href="#about" className="hover:text-indigo-400 transition">À Propos</a>}
           {sections.skills && skills.length > 0 && <a href="#skills" className="hover:text-indigo-400 transition">Compétences</a>}
@@ -127,7 +152,7 @@ export default function PortfolioRenderer({ portfolio, isPreview = false, onShow
             <div className="relative inline-block">
               <img
                 src={profile.avatarUrl}
-                alt={profile.fullName}
+                alt={profile.fullName || 'Photo de profil'}
                 className="w-32 h-32 sm:w-40 sm:h-40 rounded-full border-4 border-indigo-500/80 shadow-2xl object-cover mx-auto transform hover:scale-105 transition-transform duration-300"
               />
               <span className="absolute bottom-2 right-2 w-5 h-5 bg-emerald-500 border-2 border-slate-950 rounded-full" title="Disponible" />

@@ -10,6 +10,7 @@ import PublicPortfolioView from './components/PublicPortfolioView';
 import AuthModal from './components/AuthModal';
 import PrivacyPolicyModal from './components/PrivacyPolicyModal';
 import ShareModal from './components/ShareModal';
+import CvImportWizard from './components/CvImportWizard';
 import Toast from './components/Toast';
 
 import { PORTFOLIO_TEMPLATES } from './data/templates';
@@ -30,6 +31,7 @@ export default function App() {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isPrivacyOpen, setIsPrivacyOpen] = useState(false);
   const [isShareOpen, setIsShareOpen] = useState(false);
+  const [isCvWizardOpen, setIsCvWizardOpen] = useState(false);
 
   // Toast state
   const [toast, setToast] = useState(null);
@@ -79,6 +81,11 @@ export default function App() {
     showToast('Modèle chargé dans le studio d’édition !', 'success');
   };
 
+  const handlePortfolioGeneratedFromCv = (generatedPortfolio) => {
+    setActivePortfolio(generatedPortfolio);
+    setActiveTab('editor');
+  };
+
   const handleStartCustom = () => {
     const defaultTemplate = PORTFOLIO_TEMPLATES[0];
     handleSelectTemplate(defaultTemplate);
@@ -101,7 +108,7 @@ export default function App() {
 
   return (
     <div className="flex flex-col min-h-screen w-screen bg-slate-950 font-sans text-slate-100 overflow-x-hidden selection:bg-indigo-500 selection:text-white">
-      {/* Navbar Header (Hidden in standalone public view if desired, or compact) */}
+      {/* Navbar Header */}
       {activeTab !== 'public-view' && activeTab !== 'editor' && (
         <Header
           activeTab={activeTab}
@@ -110,6 +117,7 @@ export default function App() {
           onOpenAuth={() => setIsAuthOpen(true)}
           onLogout={handleLogout}
           onCreateNew={handleStartCustom}
+          onOpenCvWizard={() => setIsCvWizardOpen(true)}
         />
       )}
 
@@ -120,10 +128,7 @@ export default function App() {
             onSelectTemplate={handleSelectTemplate}
             onStartCustom={handleStartCustom}
             onExploreGallery={() => setActiveTab('gallery')}
-            onOpenDemo={() => {
-              setActivePortfolio(PORTFOLIO_TEMPLATES[0]);
-              setActiveTab('public-view');
-            }}
+            onOpenCvWizard={() => setIsCvWizardOpen(true)}
           />
         )}
 
@@ -168,7 +173,7 @@ export default function App() {
         )}
       </main>
 
-      {/* Global Footer (Visible on marketing pages) */}
+      {/* Global Footer */}
       {activeTab !== 'editor' && activeTab !== 'public-view' && (
         <Footer
           setActiveTab={setActiveTab}
@@ -194,6 +199,13 @@ export default function App() {
         onClose={() => setIsShareOpen(false)}
         showToast={showToast}
         onOpenPublicView={handleOpenPublicView}
+      />
+
+      <CvImportWizard
+        isOpen={isCvWizardOpen}
+        onClose={() => setIsCvWizardOpen(false)}
+        onPortfolioGenerated={handlePortfolioGeneratedFromCv}
+        showToast={showToast}
       />
 
       <Toast toast={toast} onClose={() => setToast(null)} />

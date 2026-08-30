@@ -12,15 +12,20 @@ import {
   Plus,
   Trash2,
   RefreshCw,
-  ArrowLeft
+  ArrowLeft,
+  Upload,
+  Search,
+  Globe,
+  Tag
 } from 'lucide-react';
 import PortfolioRenderer from './PortfolioRenderer';
 import { COLOR_PALETTES } from '../data/templates';
 import { savePortfolio, generateAiContent } from '../utils/storage';
+import { readImageAsDataUrl } from '../utils/fileUpload';
 
 export default function PortfolioEditor({ initialPortfolio, onBack, onOpenShareModal, showToast }) {
   const [portfolio, setPortfolio] = useState(initialPortfolio);
-  const [activeTab, setActiveTab] = useState('profile'); // 'profile' | 'theme' | 'sections' | 'skills' | 'projects' | 'experience'
+  const [activeTab, setActiveTab] = useState('profile'); // 'profile' | 'theme' | 'sections' | 'skills' | 'projects' | 'experience' | 'seo'
   const [previewMode, setPreviewMode] = useState('split'); // 'split' | 'preview-only' | 'edit-only'
   const [isSaving, setIsSaving] = useState(false);
 
@@ -40,6 +45,16 @@ export default function PortfolioEditor({ initialPortfolio, onBack, onOpenShareM
       ...prev,
       profile: {
         ...prev.profile,
+        [field]: val
+      }
+    }));
+  };
+
+  const updateSeo = (field, val) => {
+    setPortfolio((prev) => ({
+      ...prev,
+      seo: {
+        ...(prev.seo || {}),
         [field]: val
       }
     }));
@@ -76,6 +91,32 @@ export default function PortfolioEditor({ initialPortfolio, onBack, onOpenShareM
         [field]: val
       }
     }));
+  };
+
+  // Local File Upload Handler for Avatar
+  const handleAvatarFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const dataUrl = await readImageAsDataUrl(file);
+      updateProfile('avatarUrl', dataUrl);
+      showToast('Photo de profil importée depuis votre appareil !', 'success');
+    } catch (err) {
+      showToast(err.message || 'Erreur lors de l’import de l’image.', 'error');
+    }
+  };
+
+  // Local File Upload Handler for Project Image
+  const handleProjectFileUpload = async (e, projId) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const dataUrl = await readImageAsDataUrl(file);
+      handleUpdateProject(projId, 'image', dataUrl);
+      showToast('Image du projet importée avec succès !', 'success');
+    } catch (err) {
+      showToast(err.message || 'Erreur lors de l’import de l’image.', 'error');
+    }
   };
 
   // AI Fill trigger
@@ -247,7 +288,8 @@ export default function PortfolioEditor({ initialPortfolio, onBack, onOpenShareM
                 { id: 'sections', label: 'Sections', icon: <Layers className="w-3.5 h-3.5" /> },
                 { id: 'skills', label: 'Compétences', icon: <Wrench className="w-3.5 h-3.5" /> },
                 { id: 'projects', label: 'Projets', icon: <FolderPlus className="w-3.5 h-3.5" /> },
-                { id: 'experience', label: 'Expérience', icon: <Briefcase className="w-3.5 h-3.5" /> }
+                { id: 'experience', label: 'Expérience', icon: <Briefcase className="w-3.5 h-3.5" /> },
+                { id: 'seo', label: 'SEO Google', icon: <Globe className="w-3.5 h-3.5" /> }
               ].map((tab) => (
                 <button
                   key={tab.id}
@@ -295,6 +337,30 @@ export default function PortfolioEditor({ initialPortfolio, onBack, onOpenShareM
                     />
                   </div>
 
+                  {/* Photo / Avatar Upload Section */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Photo de Profil / Avatar</label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={portfolio.profile?.avatarUrl || ''}
+                        onChange={(e) => updateProfile('avatarUrl', e.target.value)}
+                        placeholder="URL de l'image ou importez ci-contre"
+                        className="flex-1 px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none"
+                      />
+                      <label className="px-3 py-2 bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/30 rounded-xl text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 shrink-0">
+                        <Upload className="w-3.5 h-3.5" />
+                        <span>Importer</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleAvatarFileUpload}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
+                  </div>
+
                   <div>
                     <div className="flex items-center justify-between mb-1">
                       <label className="block text-xs font-semibold text-slate-300 uppercase">Phrase d'accroche (Tagline)</label>
@@ -327,16 +393,6 @@ export default function PortfolioEditor({ initialPortfolio, onBack, onOpenShareM
                       rows={4}
                       value={portfolio.profile?.bio || ''}
                       onChange={(e) => updateProfile('bio', e.target.value)}
-                      className="w-full px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">URL Photo de Profil / Avatar</label>
-                    <input
-                      type="text"
-                      value={portfolio.profile?.avatarUrl || ''}
-                      onChange={(e) => updateProfile('avatarUrl', e.target.value)}
                       className="w-full px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
                     />
                   </div>
@@ -547,13 +603,25 @@ export default function PortfolioEditor({ initialPortfolio, onBack, onOpenShareM
                         </div>
 
                         <div>
-                          <label className="block text-[11px] text-slate-400 uppercase">URL de l'image</label>
-                          <input
-                            type="text"
-                            value={proj.image}
-                            onChange={(e) => handleUpdateProject(proj.id, 'image', e.target.value)}
-                            className="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-800 rounded text-xs text-white focus:outline-none"
-                          />
+                          <label className="block text-[11px] text-slate-400 uppercase">Image de Projet</label>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="text"
+                              value={proj.image}
+                              onChange={(e) => handleUpdateProject(proj.id, 'image', e.target.value)}
+                              className="flex-1 px-2.5 py-1.5 bg-slate-900 border border-slate-800 rounded text-xs text-white focus:outline-none"
+                            />
+                            <label className="px-2.5 py-1.5 bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/30 rounded text-xs font-semibold cursor-pointer flex items-center gap-1 shrink-0">
+                              <Upload className="w-3 h-3" />
+                              <span>Fichier</span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => handleProjectFileUpload(e, proj.id)}
+                                className="hidden"
+                              />
+                            </label>
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -600,6 +668,56 @@ export default function PortfolioEditor({ initialPortfolio, onBack, onOpenShareM
                         </div>
                       </div>
                     ))}
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 7: SEO GOOGLE */}
+              {activeTab === 'seo' && (
+                <div className="space-y-4">
+                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                    <Globe className="w-4 h-4 text-emerald-400" /> Référencement Google (SEO) & Métadonnées
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    Optimisez le titre, la description et les mots-clés de votre portfolio pour les moteurs de recherche et le partage sur les réseaux sociaux.
+                  </p>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">
+                      Méta-Titre Google (Title Tag)
+                    </label>
+                    <input
+                      type="text"
+                      value={portfolio.seo?.metaTitle || `${portfolio.profile?.fullName || 'Portfolio'} - ${portfolio.profile?.jobTitle || 'Professionnel'}`}
+                      onChange={(e) => updateSeo('metaTitle', e.target.value)}
+                      placeholder="Jean Dupont - Développeur Fullstack Senior | Portfolio"
+                      className="w-full px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">
+                      Méta-Description Google
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={portfolio.seo?.metaDescription || portfolio.profile?.tagline || portfolio.profile?.bio || ''}
+                      onChange={(e) => updateSeo('metaDescription', e.target.value)}
+                      placeholder="Découvrez mon parcours, mes compétences en React & Node.js, mes projets récents et contactez-moi..."
+                      className="w-full px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">
+                      Mots-Clés SEO (Séparez par des virgules)
+                    </label>
+                    <input
+                      type="text"
+                      value={portfolio.seo?.keywords || 'portfolio, développeur, freelance, React, JavaScript, projets'}
+                      onChange={(e) => updateSeo('keywords', e.target.value)}
+                      className="w-full px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
+                    />
                   </div>
                 </div>
               )}
