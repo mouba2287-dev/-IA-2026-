@@ -1,8 +1,9 @@
 import * as pdfjsLib from 'pdfjs-dist';
+import pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?url';
 import JSZip from 'jszip';
 
-// Configure pdfjs worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+// Configure pdfjs worker using Vite asset URL importer
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 
 /**
  * Reads a PDF file and extracts all pages as HTML Canvas Data URLs.
