@@ -27,7 +27,7 @@ export default function Header({
                   EN ➔ FR
                 </span>
               </div>
-              <p className="text-xs text-slate-400">PDF • CBZ • ZIP • Webtoon • Image</p>
+              <p className="text-xs text-slate-400">PDF • CBZ • ZIP • Webtoon • Images multiples</p>
             </div>
           </div>
 
@@ -95,12 +95,13 @@ export default function Header({
               </div>
             </div>
 
-            {/* Upload File Button (PDF, CBZ, ZIP, Image) */}
+            {/* Upload File Button (PDF, CBZ, ZIP, Multiple Images) */}
             <label className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-indigo-600/10 border border-indigo-500/30 hover:bg-indigo-600/20 text-indigo-300 text-xs font-medium cursor-pointer transition">
               <Upload className={`w-3.5 h-3.5 ${isLoadingFile ? 'animate-spin' : ''}`} />
-              <span>{isLoadingFile ? 'Chargement...' : 'Importer PDF / CBZ / Image'}</span>
+              <span>{isLoadingFile ? 'Chargement...' : 'Importer Images / PDF / CBZ'}</span>
               <input
                 type="file"
+                multiple
                 accept=".pdf,.cbz,.cbr,.zip,image/*"
                 onChange={onFileUpload}
                 className="hidden"

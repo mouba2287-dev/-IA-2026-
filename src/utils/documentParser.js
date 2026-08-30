@@ -72,9 +72,40 @@ export async function parseCbzFile(file) {
 }
 
 /**
- * Main file router to extract pages from PDF, CBZ/ZIP, or single image.
+ * Main file router to extract pages from PDF, CBZ/ZIP, or single/multiple images.
  */
-export async function parseMangaDocument(file) {
+export async function parseMangaDocument(fileList) {
+  const files = Array.from(fileList || []);
+  if (files.length === 0) return [];
+
+  // If multiple images are selected
+  if (files.length > 1) {
+    // Sort files naturally by name
+    files.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+
+    const pages = [];
+    let pageNum = 1;
+
+    for (const file of files) {
+      if (file.type.startsWith('image/')) {
+        const dataUrl = await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (e) => resolve(e.target.result);
+          reader.readAsDataURL(file);
+        });
+        pages.push({
+          pageNumber: pageNum,
+          image: dataUrl,
+          title: file.name
+        });
+        pageNum++;
+      }
+    }
+    return pages;
+  }
+
+  // Single file uploaded (PDF, CBZ, ZIP, or single Image)
+  const file = files[0];
   const filename = file.name.toLowerCase();
 
   if (filename.endsWith('.pdf')) {
@@ -95,6 +126,6 @@ export async function parseMangaDocument(file) {
       }
     ];
   } else {
-    throw new Error("Format de fichier non supporté. Veuillez importer un fichier PDF, CBZ, ZIP ou Image.");
+    throw new Error("Format de fichier non supporté. Veuillez importer des fichiers PDF, CBZ, ZIP ou Images.");
   }
 }

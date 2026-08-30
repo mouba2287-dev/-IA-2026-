@@ -6,28 +6,35 @@ export default function WebtoonReader({
   pageBubblesMap,
   showOriginal,
   setShowOriginal,
-  onUpdateBubble,
-  onAddBubble
+  onTranslateAllPages,
+  isTranslatingAll
 }) {
   const [zoom, setZoom] = useState(100);
 
   return (
     <div className="flex-1 flex flex-col bg-slate-950 overflow-hidden relative">
       {/* Webtoon Toolbar Controls */}
-      <div className="h-12 border-b border-slate-800 bg-slate-900/90 px-4 flex items-center justify-between z-20 sticky top-0">
+      <div className="h-12 border-b border-slate-800 bg-slate-900/90 px-4 flex items-center justify-between z-20 sticky top-0 backdrop-blur">
         <div className="flex items-center space-x-3">
           <div className="flex items-center gap-1.5 text-xs font-semibold text-indigo-400 uppercase tracking-wider">
-            <ScrollText className="w-4 h-4 text-indigo-400" />
-            Mode Lecteur Webtoon (Défilement Vertical Continuous)
+            <ScrollText className="w-4 h-4 text-emerald-400" />
+            Mode Lecteur Webtoon Continuous ({pages.length} page{pages.length > 1 ? 's' : ''})
           </div>
-          <span className="text-slate-700">|</span>
-          <span className="text-xs text-slate-400 font-mono">
-            {pages.length} page(s) chargée(s)
-          </span>
         </div>
 
-        {/* Zoom & View Toggle */}
+        {/* Action Controls */}
         <div className="flex items-center space-x-3">
+          {/* Translate All Webtoon Pages */}
+          <button
+            onClick={onTranslateAllPages}
+            disabled={isTranslatingAll || pages.length === 0}
+            className="flex items-center gap-1.5 px-3 py-1 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 disabled:opacity-50 text-white text-xs font-semibold rounded-lg shadow transition"
+          >
+            <Sparkles className={`w-3.5 h-3.5 ${isTranslatingAll ? 'animate-spin' : ''}`} />
+            {isTranslatingAll ? 'Traduction en cours...' : 'Tout traduire (Chapitre complet)'}
+          </button>
+
+          {/* Zoom */}
           <div className="flex items-center bg-slate-950 px-2 py-1 rounded-lg border border-slate-800 space-x-2">
             <button
               onClick={() => setZoom((z) => Math.max(50, z - 10))}
@@ -46,6 +53,7 @@ export default function WebtoonReader({
             </button>
           </div>
 
+          {/* V.O / V.F. Toggle */}
           <button
             onClick={() => setShowOriginal(!showOriginal)}
             className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium border transition ${

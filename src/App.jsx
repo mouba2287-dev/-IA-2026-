@@ -12,7 +12,7 @@ export default function App() {
   const [samplePages, setSamplePages] = useState(SAMPLE_MANGA_PAGES);
   const [currentSample, setCurrentSample] = useState(SAMPLE_MANGA_PAGES[0]);
 
-  // Document Pages State (multi-page PDF, CBZ, ZIP or single image)
+  // Document Pages State (multi-page PDF, CBZ, ZIP or multiple images)
   const [pages, setPages] = useState([
     {
       pageNumber: 1,
@@ -31,6 +31,7 @@ export default function App() {
   const [activeBubbleId, setActiveBubbleId] = useState(null);
   const [showOriginal, setShowOriginal] = useState(false);
   const [isLoadingFile, setIsLoadingFile] = useState(false);
+  const [isTranslatingAllPages, setIsTranslatingAllPages] = useState(false);
   const [fileError, setFileError] = useState(null);
   const canvasRef = useRef(null);
 
@@ -53,33 +54,33 @@ export default function App() {
     setActiveBubbleId(null);
   };
 
-  // Upload user's PDF, CBZ, ZIP, or Image file
+  // Upload user's PDF, CBZ, ZIP, or Multiple Images
   const handleFileUpload = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
 
     setIsLoadingFile(true);
     setFileError(null);
 
     try {
-      const extractedPages = await parseMangaDocument(file);
+      const extractedPages = await parseMangaDocument(files);
       if (extractedPages && extractedPages.length > 0) {
         setPages(extractedPages);
         setCurrentPageIndex(0);
 
-        // Initialize default bubble for first page if empty
+        // Initialize default bubbles for each page if empty
         const initialMap = {};
         extractedPages.forEach((p, idx) => {
           const pNum = idx + 1;
-          initialMap[pNum] = [
+          initialMap[pNum] = p.bubbles || [
             {
               id: `b-${pNum}-1`,
-              x: 25,
-              y: 20,
+              x: 20,
+              y: 15,
               width: 40,
               height: 15,
-              textEn: "Sample manga dialogue",
-              textFr: "Exemple de dialogue manga",
+              textEn: `Page ${pNum} dialogue text`,
+              textFr: `Texte de dialogue Page ${pNum}`,
               fontSize: 16,
               bgColor: "#ffffff",
               textColor: "#000000",
@@ -93,7 +94,7 @@ export default function App() {
       }
     } catch (err) {
       console.error("File processing error:", err);
-      setFileError(err.message || "Erreur lors de la lecture du fichier.");
+      setFileError(err.message || "Erreur lors de la lecture des fichiers.");
     } finally {
       setIsLoadingFile(false);
     }
@@ -145,6 +146,30 @@ export default function App() {
     if (activeBubbleId === id) {
       setActiveBubbleId(null);
     }
+  };
+
+  // Translate all speech bubbles across all Webtoon pages
+  const handleTranslateAllPages = async () => {
+    setIsTranslatingAllPages(true);
+    const updatedMap = { ...pageBubblesMap };
+
+    for (const pageKey of Object.keys(updatedMap)) {
+      const pageBubbles = updatedMap[pageKey] || [];
+      const translatedBubbles = [];
+
+      for (const b of pageBubbles) {
+        if (b.textEn && !b.textFr) {
+          const textFr = await translateText(b.textEn);
+          translatedBubbles.push({ ...b, textFr });
+        } else {
+          translatedBubbles.push(b);
+        }
+      }
+      updatedMap[pageKey] = translatedBubbles;
+    }
+
+    setPageBubblesMap(updatedMap);
+    setIsTranslatingAllPages(false);
   };
 
   // Export JSON configuration of all pages & bubbles
@@ -270,6 +295,8 @@ export default function App() {
             setShowOriginal={setShowOriginal}
             onUpdateBubble={handleUpdateBubble}
             onAddBubble={handleAddBubble}
+            onTranslateAllPages={handleTranslateAllPages}
+            isTranslatingAll={isTranslatingAllPages}
           />
         ) : (
           <ScriptTranslator />
