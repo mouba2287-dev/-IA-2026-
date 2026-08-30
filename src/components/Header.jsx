@@ -1,14 +1,15 @@
 import React from 'react';
-import { Languages, Upload, Download, FileText, Image as ImageIcon, Sparkles, BookOpen } from 'lucide-react';
+import { Languages, Upload, Download, FileText, Image as ImageIcon, Sparkles, BookOpen, ScrollText } from 'lucide-react';
 
 export default function Header({
   activeTab,
   setActiveTab,
-  onImageUpload,
+  onFileUpload,
   onSelectSample,
   samplePages,
   onExportImage,
-  onExportScript
+  onExportScript,
+  isLoadingFile
 }) {
   return (
     <header className="bg-slate-900 border-b border-slate-800 sticky top-0 z-50">
@@ -26,7 +27,7 @@ export default function Header({
                   EN ➔ FR
                 </span>
               </div>
-              <p className="text-xs text-slate-400">Traducteur de Manga & Comics Intelligents</p>
+              <p className="text-xs text-slate-400">PDF • CBZ • ZIP • Webtoon • Image</p>
             </div>
           </div>
 
@@ -34,25 +35,36 @@ export default function Header({
           <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800">
             <button
               onClick={() => setActiveTab('studio')}
-              className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
                 activeTab === 'studio'
                   ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
                   : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
               }`}
             >
               <ImageIcon className="w-4 h-4" />
-              Studio Image & Bulles
+              Studio Page
+            </button>
+            <button
+              onClick={() => setActiveTab('webtoon')}
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                activeTab === 'webtoon'
+                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+              }`}
+            >
+              <ScrollText className="w-4 h-4 text-emerald-400" />
+              Lecteur Webtoon
             </button>
             <button
               onClick={() => setActiveTab('script')}
-              className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
                 activeTab === 'script'
                   ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
                   : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
               }`}
             >
               <FileText className="w-4 h-4" />
-              Traducteur de Texte / Script
+              Traducteur Script
             </button>
           </div>
 
@@ -83,15 +95,16 @@ export default function Header({
               </div>
             </div>
 
-            {/* Upload Image Button */}
+            {/* Upload File Button (PDF, CBZ, ZIP, Image) */}
             <label className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-indigo-600/10 border border-indigo-500/30 hover:bg-indigo-600/20 text-indigo-300 text-xs font-medium cursor-pointer transition">
-              <Upload className="w-3.5 h-3.5" />
-              <span>Importer Image</span>
+              <Upload className={`w-3.5 h-3.5 ${isLoadingFile ? 'animate-spin' : ''}`} />
+              <span>{isLoadingFile ? 'Chargement...' : 'Importer PDF / CBZ / Image'}</span>
               <input
                 type="file"
-                accept="image/*"
-                onChange={onImageUpload}
+                accept=".pdf,.cbz,.cbr,.zip,image/*"
+                onChange={onFileUpload}
                 className="hidden"
+                disabled={isLoadingFile}
               />
             </label>
 
@@ -103,7 +116,7 @@ export default function Header({
                 className="flex items-center gap-1 px-2.5 py-1 text-xs text-slate-300 hover:text-white hover:bg-slate-700 rounded transition"
               >
                 <Download className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Export Page</span>
+                <span>Export</span>
               </button>
               <button
                 onClick={onExportScript}
