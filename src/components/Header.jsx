@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, LayoutGrid, FolderHeart, HelpCircle, User, LogOut, PlusCircle, Wand2 } from 'lucide-react';
+import { Sparkles, LayoutGrid, FolderHeart, HelpCircle, User, LogOut, PlusCircle, Wand2, ShieldCheck } from 'lucide-react';
 
 export default function Header({
   activeTab,
@@ -99,14 +99,26 @@ export default function Header({
 
         {user ? (
           <div className="flex items-center gap-2 pl-2 border-l border-slate-800">
-            <img
-              src={user.avatar}
-              alt={user.name}
-              className="w-8 h-8 rounded-full border border-indigo-500/50 object-cover"
-            />
-            <span className="hidden lg:inline text-xs font-semibold text-slate-200 max-w-[100px] truncate">
-              {user.name}
-            </span>
+            <div className="relative">
+              <img
+                src={user.avatar}
+                alt={user.name}
+                className="w-8 h-8 rounded-full border border-indigo-500/50 object-cover"
+              />
+              {user.isEmailVerified && (
+                <span className="absolute -bottom-1 -right-1 bg-emerald-500 text-white p-0.5 rounded-full" title="E-mail vérifié">
+                  <ShieldCheck className="w-2.5 h-2.5" />
+                </span>
+              )}
+            </div>
+            <div className="hidden lg:block text-left">
+              <span className="block text-xs font-semibold text-slate-200 max-w-[100px] truncate">
+                {user.name}
+              </span>
+              <span className="block text-[10px] text-emerald-400 font-medium">
+                {user.authProvider === 'google' ? 'Google' : 'Vérifié'}
+              </span>
+            </div>
             <button
               onClick={onLogout}
               title="Déconnexion"
