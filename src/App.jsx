@@ -1,202 +1,307 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import Header from './components/Header';
-import Footer from './components/Footer';
-import LandingPage from './components/LandingPage';
-import TemplateGallery from './components/TemplateGallery';
-import PortfolioDashboard from './components/PortfolioDashboard';
-import PortfolioEditor from './components/PortfolioEditor';
-import FaqSection from './components/FaqSection';
-import PublicPortfolioView from './components/PublicPortfolioView';
-import AuthModal from './components/AuthModal';
-import PrivacyPolicyModal from './components/PrivacyPolicyModal';
-import ShareModal from './components/ShareModal';
-import Toast from './components/Toast';
-
-import { PORTFOLIO_TEMPLATES } from './data/templates';
-import {
-  getUserSession,
-  saveUserSession,
-  clearUserSession,
-  decodePortfolioFromUrlHash
-} from './utils/storage';
+import MangaCanvas from './components/MangaCanvas';
+import BubbleEditor from './components/BubbleEditor';
+import ScriptTranslator from './components/ScriptTranslator';
+import WebtoonReader from './components/WebtoonReader';
+import { SAMPLE_MANGA_PAGES, translateText } from './utils/translator';
+import { parseMangaDocument } from './utils/documentParser';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('landing'); // 'landing' | 'gallery' | 'dashboard' | 'editor' | 'faq' | 'public-view'
-  const [user, setUser] = useState(null);
-  const [activePortfolio, setActivePortfolio] = useState(null);
-  const [sharePortfolio, setSharePortfolio] = useState(null);
+  const [activeTab, setActiveTab] = useState('studio'); // 'studio' | 'webtoon' | 'script'
+  const [samplePages, setSamplePages] = useState(SAMPLE_MANGA_PAGES);
+  const [currentSample, setCurrentSample] = useState(SAMPLE_MANGA_PAGES[0]);
 
-  // Modals state
-  const [isAuthOpen, setIsAuthOpen] = useState(false);
-  const [isPrivacyOpen, setIsPrivacyOpen] = useState(false);
-  const [isShareOpen, setIsShareOpen] = useState(false);
-
-  // Toast state
-  const [toast, setToast] = useState(null);
-
-  const showToast = (message, type = 'success') => {
-    setToast({ message, type });
-  };
-
-  // Load user session and check hash URL on initial mount
-  useEffect(() => {
-    const session = getUserSession();
-    if (session) setUser(session);
-
-    const hash = window.location.hash;
-    if (hash && (hash.startsWith('#p=') || hash.startsWith('#id='))) {
-      const decoded = decodePortfolioFromUrlHash(hash);
-      if (decoded) {
-        setActivePortfolio(decoded);
-        setActiveTab('public-view');
-      }
+  // Document Pages State (multi-page PDF, CBZ, ZIP or multiple images)
+  const [pages, setPages] = useState([
+    {
+      pageNumber: 1,
+      image: SAMPLE_MANGA_PAGES[0].image,
+      title: SAMPLE_MANGA_PAGES[0].title,
+      bubbles: SAMPLE_MANGA_PAGES[0].bubbles
     }
-  }, []);
+  ]);
+  const [currentPageIndex, setCurrentPageIndex] = useState(0);
 
-  // Handlers
-  const handleLoginSuccess = (userData) => {
-    setUser(userData);
-    saveUserSession(userData);
-    showToast(`Bienvenue, ${userData.name} !`, 'success');
+  // Map of bubbles per page key: { 1: [bubble1, bubble2], 2: [...] }
+  const [pageBubblesMap, setPageBubblesMap] = useState({
+    1: SAMPLE_MANGA_PAGES[0].bubbles
+  });
+
+  const [activeBubbleId, setActiveBubbleId] = useState(null);
+  const [showOriginal, setShowOriginal] = useState(false);
+  const [isLoadingFile, setIsLoadingFile] = useState(false);
+  const [isTranslatingAllPages, setIsTranslatingAllPages] = useState(false);
+  const [fileError, setFileError] = useState(null);
+  const canvasRef = useRef(null);
+
+  const currentPageNumber = currentPageIndex + 1;
+  const currentBubbles = pageBubblesMap[currentPageNumber] || [];
+
+  // Switch demo sample manga page
+  const handleSelectSample = (sample) => {
+    setCurrentSample(sample);
+    setPages([
+      {
+        pageNumber: 1,
+        image: sample.image,
+        title: sample.title,
+        bubbles: sample.bubbles
+      }
+    ]);
+    setCurrentPageIndex(0);
+    setPageBubblesMap({ 1: sample.bubbles });
+    setActiveBubbleId(null);
   };
 
-  const handleLogout = () => {
-    setUser(null);
-    clearUserSession();
-    showToast('Vous avez été déconnecté.', 'info');
+  // Upload user's PDF, CBZ, ZIP, or Multiple Images
+  const handleFileUpload = async (e) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setIsLoadingFile(true);
+    setFileError(null);
+
+    try {
+      const extractedPages = await parseMangaDocument(files);
+      if (extractedPages && extractedPages.length > 0) {
+        setPages(extractedPages);
+        setCurrentPageIndex(0);
+
+        // Initialize default bubbles for each page if empty
+        const initialMap = {};
+        extractedPages.forEach((p, idx) => {
+          const pNum = idx + 1;
+          initialMap[pNum] = p.bubbles || [
+            {
+              id: `b-${pNum}-1`,
+              x: 20,
+              y: 15,
+              width: 40,
+              height: 15,
+              textEn: `Page ${pNum} dialogue text`,
+              textFr: `Texte de dialogue Page ${pNum}`,
+              fontSize: 16,
+              bgColor: "#ffffff",
+              textColor: "#000000",
+              fontStyle: "normal"
+            }
+          ];
+        });
+
+        setPageBubblesMap(initialMap);
+        setActiveBubbleId(null);
+      }
+    } catch (err) {
+      console.error("File processing error:", err);
+      setFileError(err.message || "Erreur lors de la lecture des fichiers.");
+    } finally {
+      setIsLoadingFile(false);
+    }
   };
 
-  const handleSelectTemplate = (template) => {
-    const newPf = {
-      ...JSON.parse(JSON.stringify(template)),
-      id: `pf-${Date.now()}`,
-      name: `Mon Portfolio (${template.name})`,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+  // Add bubble box to current page
+  const handleAddBubble = async (box) => {
+    const newId = `b-${currentPageNumber}-${Date.now()}`;
+    const defaultEn = "New dialogue text";
+    const defaultFr = await translateText(defaultEn);
+
+    const newBubble = {
+      id: newId,
+      x: box.x,
+      y: box.y,
+      width: box.width || 30,
+      height: box.height || 15,
+      textEn: defaultEn,
+      textFr: defaultFr,
+      fontSize: 15,
+      bgColor: "#ffffff",
+      textColor: "#000000",
+      fontStyle: "normal"
     };
-    setActivePortfolio(newPf);
-    setActiveTab('editor');
-    showToast('Modèle chargé dans le studio d’édition !', 'success');
+
+    setPageBubblesMap((prev) => ({
+      ...prev,
+      [currentPageNumber]: [...(prev[currentPageNumber] || []), newBubble]
+    }));
+    setActiveBubbleId(newId);
   };
 
-  const handleStartCustom = () => {
-    const defaultTemplate = PORTFOLIO_TEMPLATES[0];
-    handleSelectTemplate(defaultTemplate);
+  // Update bubble properties on current page
+  const handleUpdateBubble = (id, updates) => {
+    setPageBubblesMap((prev) => ({
+      ...prev,
+      [currentPageNumber]: (prev[currentPageNumber] || []).map((b) =>
+        b.id === id ? { ...b, ...updates } : b
+      )
+    }));
   };
 
-  const handleEditPortfolio = (portfolio) => {
-    setActivePortfolio(portfolio);
-    setActiveTab('editor');
+  // Delete bubble from current page
+  const handleDeleteBubble = (id) => {
+    setPageBubblesMap((prev) => ({
+      ...prev,
+      [currentPageNumber]: (prev[currentPageNumber] || []).filter((b) => b.id !== id)
+    }));
+    if (activeBubbleId === id) {
+      setActiveBubbleId(null);
+    }
   };
 
-  const handleOpenShare = (portfolio) => {
-    setSharePortfolio(portfolio);
-    setIsShareOpen(true);
+  // Translate all speech bubbles across all Webtoon pages
+  const handleTranslateAllPages = async () => {
+    setIsTranslatingAllPages(true);
+    const updatedMap = { ...pageBubblesMap };
+
+    for (const pageKey of Object.keys(updatedMap)) {
+      const pageBubbles = updatedMap[pageKey] || [];
+      const translatedBubbles = [];
+
+      for (const b of pageBubbles) {
+        if (b.textEn && !b.textFr) {
+          const textFr = await translateText(b.textEn);
+          translatedBubbles.push({ ...b, textFr });
+        } else {
+          translatedBubbles.push(b);
+        }
+      }
+      updatedMap[pageKey] = translatedBubbles;
+    }
+
+    setPageBubblesMap(updatedMap);
+    setIsTranslatingAllPages(false);
   };
 
-  const handleOpenPublicView = (portfolio) => {
-    setActivePortfolio(portfolio);
-    setActiveTab('public-view');
+  // Export JSON configuration of all pages & bubbles
+  const handleExportImage = () => {
+    const jsonScript = JSON.stringify(
+      { pages: pages.map((p) => p.title), pageBubblesMap },
+      null,
+      2
+    );
+    const blob = new Blob([jsonScript], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `manga_translation_export_${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
+
+  // Export full script summary as TXT
+  const handleExportScript = () => {
+    const textLines = [];
+    Object.keys(pageBubblesMap).forEach((pNum) => {
+      textLines.push(`=== PAGE ${pNum} ===`);
+      (pageBubblesMap[pNum] || []).forEach((b, idx) => {
+        textLines.push(`[Bulle ${idx + 1}] EN: ${b.textEn} -> FR: ${b.textFr}`);
+      });
+      textLines.push('');
+    });
+
+    const blob = new Blob([textLines.join('\n')], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `manga_full_script_${Date.now()}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const currentImageSrc = pages[currentPageIndex]?.image || SAMPLE_MANGA_PAGES[0].image;
 
   return (
-    <div className="flex flex-col min-h-screen w-screen bg-slate-950 font-sans text-slate-100 overflow-x-hidden selection:bg-indigo-500 selection:text-white">
-      {/* Navbar Header (Hidden in standalone public view if desired, or compact) */}
-      {activeTab !== 'public-view' && activeTab !== 'editor' && (
-        <Header
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          user={user}
-          onOpenAuth={() => setIsAuthOpen(true)}
-          onLogout={handleLogout}
-          onCreateNew={handleStartCustom}
-        />
+    <div className="flex flex-col h-screen w-screen bg-slate-950 font-sans text-slate-100 overflow-hidden">
+      {/* Top Navbar Header */}
+      <Header
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        onFileUpload={handleFileUpload}
+        onSelectSample={handleSelectSample}
+        samplePages={samplePages}
+        onExportImage={handleExportImage}
+        onExportScript={handleExportScript}
+        isLoadingFile={isLoadingFile}
+      />
+
+      {/* Error Banner */}
+      {fileError && (
+        <div className="bg-rose-500/20 border-b border-rose-500/30 px-4 py-2 text-xs text-rose-200 flex items-center justify-between">
+          <span>⚠️ {fileError}</span>
+          <button onClick={() => setFileError(null)} className="font-bold hover:underline">
+            Fermer
+          </button>
+        </div>
       )}
 
       {/* Main Workspace Body */}
-      <main className="flex-1 flex flex-col overflow-hidden relative">
-        {activeTab === 'landing' && (
-          <LandingPage
-            onSelectTemplate={handleSelectTemplate}
-            onStartCustom={handleStartCustom}
-            onExploreGallery={() => setActiveTab('gallery')}
-            onOpenDemo={() => {
-              setActivePortfolio(PORTFOLIO_TEMPLATES[0]);
-              setActiveTab('public-view');
-            }}
-          />
-        )}
+      <main className="flex-1 flex overflow-hidden relative">
+        {activeTab === 'studio' ? (
+          <>
+            <div className="flex-1 flex flex-col h-full overflow-hidden">
+              {/* Multi-page Navigation Bar */}
+              {pages.length > 1 && (
+                <div className="bg-slate-900 border-b border-slate-800 px-4 py-1.5 flex items-center justify-between text-xs">
+                  <span className="font-medium text-slate-300">
+                    Page {currentPageIndex + 1} sur {pages.length}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      disabled={currentPageIndex === 0}
+                      onClick={() => setCurrentPageIndex((i) => Math.max(0, i - 1))}
+                      className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 rounded text-slate-200 transition"
+                    >
+                      ◀ Page Précédente
+                    </button>
+                    <button
+                      disabled={currentPageIndex === pages.length - 1}
+                      onClick={() => setCurrentPageIndex((i) => Math.min(pages.length - 1, i + 1))}
+                      className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 rounded text-white transition"
+                    >
+                      Page Suivante ▶
+                    </button>
+                  </div>
+                </div>
+              )}
 
-        {activeTab === 'gallery' && (
-          <TemplateGallery
-            onSelectTemplate={handleSelectTemplate}
-            onPreviewTemplate={(template) => {
-              setActivePortfolio(template);
-              setActiveTab('public-view');
-            }}
-          />
-        )}
+              <MangaCanvas
+                imageSrc={currentImageSrc}
+                bubbles={currentBubbles}
+                activeBubbleId={activeBubbleId}
+                setActiveBubbleId={setActiveBubbleId}
+                onAddBubble={handleAddBubble}
+                onUpdateBubble={handleUpdateBubble}
+                onDeleteBubble={handleDeleteBubble}
+                showOriginal={showOriginal}
+                setShowOriginal={setShowOriginal}
+                canvasRef={canvasRef}
+              />
+            </div>
 
-        {activeTab === 'dashboard' && (
-          <PortfolioDashboard
-            onEditPortfolio={handleEditPortfolio}
-            onOpenShareModal={handleOpenShare}
-            onOpenPublicView={handleOpenPublicView}
-            onCreateNew={handleStartCustom}
-            showToast={showToast}
+            <BubbleEditor
+              bubbles={currentBubbles}
+              activeBubbleId={activeBubbleId}
+              setActiveBubbleId={setActiveBubbleId}
+              onUpdateBubble={handleUpdateBubble}
+              onDeleteBubble={handleDeleteBubble}
+              onAddBubble={handleAddBubble}
+            />
+          </>
+        ) : activeTab === 'webtoon' ? (
+          <WebtoonReader
+            pages={pages}
+            pageBubblesMap={pageBubblesMap}
+            showOriginal={showOriginal}
+            setShowOriginal={setShowOriginal}
+            onUpdateBubble={handleUpdateBubble}
+            onAddBubble={handleAddBubble}
+            onTranslateAllPages={handleTranslateAllPages}
+            isTranslatingAll={isTranslatingAllPages}
           />
-        )}
-
-        {activeTab === 'editor' && activePortfolio && (
-          <PortfolioEditor
-            initialPortfolio={activePortfolio}
-            onBack={() => setActiveTab('dashboard')}
-            onOpenShareModal={handleOpenShare}
-            showToast={showToast}
-          />
-        )}
-
-        {activeTab === 'faq' && <FaqSection showToast={showToast} />}
-
-        {activeTab === 'public-view' && (
-          <PublicPortfolioView
-            portfolio={activePortfolio}
-            onBack={() => setActiveTab('landing')}
-            onStartCustom={handleStartCustom}
-            showToast={showToast}
-          />
+        ) : (
+          <ScriptTranslator />
         )}
       </main>
-
-      {/* Global Footer (Visible on marketing pages) */}
-      {activeTab !== 'editor' && activeTab !== 'public-view' && (
-        <Footer
-          setActiveTab={setActiveTab}
-          onOpenPrivacy={() => setIsPrivacyOpen(true)}
-        />
-      )}
-
-      {/* Modals & Toasts */}
-      <AuthModal
-        isOpen={isAuthOpen}
-        onClose={() => setIsAuthOpen(false)}
-        onLoginSuccess={handleLoginSuccess}
-      />
-
-      <PrivacyPolicyModal
-        isOpen={isPrivacyOpen}
-        onClose={() => setIsPrivacyOpen(false)}
-      />
-
-      <ShareModal
-        portfolio={sharePortfolio}
-        isOpen={isShareOpen}
-        onClose={() => setIsShareOpen(false)}
-        showToast={showToast}
-        onOpenPublicView={handleOpenPublicView}
-      />
-
-      <Toast toast={toast} onClose={() => setToast(null)} />
     </div>
   );
 }
