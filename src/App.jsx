@@ -91,6 +91,26 @@ export default function App() {
 
         setPageBubblesMap(initialMap);
         setActiveBubbleId(null);
+
+        // Automatically switch to Webtoon reader mode
+        setActiveTab('webtoon');
+
+        // Automatically translate all pages immediately without waiting
+        setIsTranslatingAllPages(true);
+        const translatedMap = { ...initialMap };
+
+        for (const pageKey of Object.keys(translatedMap)) {
+          const pageBubbles = translatedMap[pageKey] || [];
+          const translatedBubbles = [];
+          for (const b of pageBubbles) {
+            const textFr = await translateText(b.textEn || `Page ${pageKey} content`);
+            translatedBubbles.push({ ...b, textFr });
+          }
+          translatedMap[pageKey] = translatedBubbles;
+        }
+
+        setPageBubblesMap(translatedMap);
+        setIsTranslatingAllPages(false);
       }
     } catch (err) {
       console.error("File processing error:", err);

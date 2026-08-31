@@ -65,20 +65,37 @@ export default function MangaCanvas({
           </span>
           <span className="text-slate-600">|</span>
           <button
-            onClick={() => setScale((s) => Math.max(0.5, s - 0.1))}
+            onClick={() => setScale((s) => Math.max(0.3, s - (s > 2 ? 0.5 : 0.2)))}
             className="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white transition"
             title="Dézoomer"
           >
             <ZoomOut className="w-4 h-4" />
           </button>
-          <span className="text-xs font-mono text-slate-400">{Math.round(scale * 100)}%</span>
+          <span className="text-xs font-mono font-bold text-indigo-400 w-12 text-center">
+            {Math.round(scale * 100)}%
+          </span>
           <button
-            onClick={() => setScale((s) => Math.min(2.5, s + 0.1))}
+            onClick={() => setScale((s) => Math.min(10, s + (s >= 2 ? 0.5 : 0.2)))}
             className="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white transition"
-            title="Zoomer"
+            title="Zoomer (Jusqu'à 1000%)"
           >
             <ZoomIn className="w-4 h-4" />
           </button>
+          <div className="hidden sm:flex items-center gap-1 border-l border-slate-800 pl-2">
+            {[1, 2, 4, 8].map((factor) => (
+              <button
+                key={factor}
+                onClick={() => setScale(factor)}
+                className={`px-1.5 py-0.5 text-[10px] font-mono rounded transition ${
+                  Math.round(scale) === factor
+                    ? 'bg-indigo-600 text-white font-bold'
+                    : 'bg-slate-900 text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                {factor * 100}%
+              </button>
+            ))}
+          </div>
           <button
             onClick={() => setScale(1)}
             className="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white transition"
